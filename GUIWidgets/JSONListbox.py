@@ -100,7 +100,7 @@ class JSONListbox(Listbox):
 
         # Button creation
 
-        create_button = tk.Button(button_frame, text="Create Element", command=lambda:self.add_item())
+        create_button = tk.Button(button_frame, text="Create Element", command=self.add_item)
         
 
         edit_button = tk.Button(button_frame, text="Edit Element", command=self.edit_item)
@@ -266,12 +266,8 @@ class JSONListbox(Listbox):
             edit_window = tk.Toplevel(self) # Create a new window for editing
             edit_window.title("Edit Item") # Set the window title
             entries = {} # Initialize a dictionary to store entry widgets
-            for key, value in item.items(): # Iterate over each key-value pair in the item
-                tk.Label(edit_window, text=key).pack() # Create a label for the key
-                entry = tk.Entry(edit_window) # Create an entry widget for the value
-                entry.insert(0, value)  # Insert the value into the entry widget
-                entry.pack()   # Pack the entry widget
-                entries[key] = entry   # Store the entry widget in the dictionary
+            
+            self.openCreateEditWindow(edit_window, entries) 
 
             def save_edit():   # Define a function to save the edited item
                 for key, entry in entries.items():  # Iterate over each key-entry pair
@@ -301,13 +297,7 @@ class JSONListbox(Listbox):
         add_window.title("Add Item") # Set the window title
         entries = {} # Initialize a dictionary to store entry widgets
 
-        for label, widget_info in self.fields.items(): # Iterate over each field
-            tk.Label(add_window, text=label).pack() # Create a label for the field
-            widget_type = widget_info[0] # Get the type of the widget
-            widget_kwargs = widget_info[1] # Get the kwargs for the widget
-            widget = widget_type(add_window, **widget_kwargs) # Create the widget
-            widget.pack() # Pack the widget
-            entries[label] = widget # Store the widget in the dictionary
+        self.openCreateEditWindow(add_window, entries) # Call the extra functions if they are provided
 
         def save_add(): # Define a function to save the new item
             new_item = {label: widget.get() for label, widget in entries.items()} # Create a new item from the entries
@@ -325,6 +315,15 @@ class JSONListbox(Listbox):
             for function in self.addItemExtraFunctionList:
                 function()
 
+
+    def openCreateEditWindow(self, add_window, entries):
+        for label, widget_info in self.fields.items(): # Iterate over each field
+            tk.Label(add_window, text=label).pack() # Create a label for the field
+            widget_type = widget_info[0] # Get the type of the widget
+            widget_kwargs = widget_info[1] # Get the kwargs for the widget
+            widget = widget_type(add_window, **widget_kwargs) # Create the widget
+            widget.pack() # Pack the widget
+            entries[label] = widget # Store the widget in the dictionary
         
     def returnJSON(self):
         print(self.JSONData)
