@@ -6,7 +6,7 @@ class GPIOPinnerAutoAssignedEntry(Entry):
     pinner = GPIOPinner()
     def __init__(self, root=None, **kwargs):
       
-        valueToBeShown = GPIOPinnerAutoAssignedEntry.pinner.returnFirstAvailablePin()
+        valueToBeShown = GPIOPinnerAutoAssignedEntry.pinner.rentFirstAvailablePin()
 
         super().__init__(root, **kwargs)
         

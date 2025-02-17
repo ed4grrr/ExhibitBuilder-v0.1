@@ -30,7 +30,7 @@ class JSONListbox(Listbox):
         edit_item(): Opens a window to edit the selected item.
     """
 
-    def __init__(self, master=None, json_data=None, button_placement:str = "bottom", title="JSONListbox", fields = {"name":[tk.Entry,{}]}, padX =0, padY =0, **kwargs):
+    def __init__(self, master=None, json_data=None, button_placement:str = "bottom", title="JSONListbox", addFields = {"name":[tk.Entry,{}]}, editFields = {str:[tk.Entry,{}]}, padX =0, padY =0, **kwargs):
         """Initialize the CustomListbox with optional JSON data.
         Args:
             fields (dict): A dictionary where the key is the label for the field and the value is a dict with the key being the type of tk input widget to be created and the value is a dict containing the kwargs that control the    properties of the input widget to be created.
@@ -54,6 +54,19 @@ class JSONListbox(Listbox):
             self.addItemExtraFunctionList = kwargs["addItemsExtraFunctions"]
         except KeyError:
             self.addItemExtraFunctionList = None
+
+        try:
+            self.onEditClosingFunction = kwargs["onEditClosingFunction"]
+
+        except KeyError:
+            self.onEditClosingFunction = None
+
+        try:
+            self.onAddClosingFunction = kwargs["onAddClosingFunction"]
+        except KeyError:
+            self.onAddClosingFunction = None
+
+
 
 
         try:
@@ -80,7 +93,8 @@ class JSONListbox(Listbox):
 
 ###########################################################################
         #general TKinter + custom widgets setup
-        self.fields = fields
+        self.addFields = addFields
+        self.editFields = editFields
         self.masterFrame = tk.Frame(master, highlightbackground="black", 
         highlightthickness=1) # Create a frame to contain the Listbox
         self.titleLabel = tk.Label(self.masterFrame, text=title)
@@ -200,7 +214,7 @@ class JSONListbox(Listbox):
                 value = self.get(index) # Get the value of the selected item
                 print(f"Selected item: {value}") # Print the selected item
 
-    def _executeExtraFunction(self, functionList, selection):
+    def _executeExtraFunction(self, functionList, *args, **kwargs):
         """execute given extra functions given the selection(s) as an argument
 
         This method is used to execute the extra functions provided by the programmer. The functionList is a list of functions that will be called with the selection as an argument. The selection is JSON of the selected item(s) in the listbox. This method is used to add extra functionality to the buttons. It will not replace the default functionality of the buttons, only add to them.
@@ -213,7 +227,7 @@ class JSONListbox(Listbox):
         if functionList != None:
             for function in functionList:
                 # call the function and provide the current selection for use by the programmer
-                function(selection)
+                function(*args, **kwargs)
 
     def copy_item(self):
         """Copy the selected items to the clipboard.
@@ -221,10 +235,12 @@ class JSONListbox(Listbox):
         This method stores the selected items in the copied_items attribute for pasting. Can be used to a single item or multiple items. The items will be inserted at the selected index. No items will be copied if no items are selected."""
         selection = self.curselection() # Get the selected item(s)
         if selection: # If an item is selected
+            
+            # This is placed here to do anything the programmer wants to do with the copied items before they are copied
+            self._executeExtraFunction(self.copyItemsExtraFunctionList, selection)
+            
             self.copied_items = [self.JSONData[i] for i in selection]  # Copy the selected item(s)
 
-        # Call the extra functions if they are provided
-        self._executeExtraFunction(self.copyItemsExtraFunctionList, selection)
         
 
     def paste_item(self):
@@ -234,12 +250,13 @@ class JSONListbox(Listbox):
         if hasattr(self, 'copied_items'): # If items have been copied
             selection = self.curselection()     # Get the selected item(s)
             if selection:   # If an item is selected
+                # This is placed here to do anything the programmer wants to do with the copied items before they are pasted
+                self._executeExtraFunction(self.pasteItemsExtraFunctionList, self.copied_items)
                 for i, item in enumerate(self.copied_items):    # Iterate over each copied item
                     self.JSONData.insert(selection[0] + i, item)   # Insert the copied item at the selected index
                 self.populate_listbox()     # Repopulate the listbox
 
-        # Call the extra functions if they are provided
-        self._executeExtraFunction(self.pasteItemsExtraFunctionList, selection)
+        
 
     def delete_item(self):
         """Delete the selected items from the listbox.
@@ -248,40 +265,45 @@ class JSONListbox(Listbox):
         selection = self.curselection()     # Get the selected item(s)
         if selection:  # If an item is selected
             if messagebox.askyesno("Delete", "Are you sure you want to delete the selected items?"): # Confirm deletion
+                # Call the extra functions if they are provided
+                self._executeExtraFunction(self.deleteItemsExtraFunctionList, selection)
                 for index in reversed(selection):   # Iterate over each selected item in reverse order
                     del self.JSONData[index]  # Delete the item from the JSON data
                 self.populate_listbox()    # Repopulate the listbox
         
-        # Call the extra functions if they are provided
-        self._executeExtraFunction(self.deleteItemsExtraFunctionList, selection)
+
 
     def edit_item(self):
         """Open a window to edit the selected item.
         
         This method opens a window to edit the selected item. The window displays the key-value pairs of the item, allowing the user to modify the values. The edited item is saved back to the JSON data. This method can edit only edit a single item at a time and will not open the edit window if no items are selected."""
-        selection = self.curselection() # Get the selected item(s)
-        if selection: # If an item is selected
-            index = selection[0] # Get the index of the selected item
+        selections = self.curselection() # Get the selected item(s)
+        if selections: # If an item is selected
+            index = selections[0] # Get the index of the selected item
             item = self.JSONData[index] # Get the selected item
-            edit_window = tk.Toplevel(self) # Create a new window for editing
-            edit_window.title("Edit Item") # Set the window title
-            entries = {} # Initialize a dictionary to store entry widgets
             
-            self.openCreateEditWindow(edit_window, entries) 
+            # Call the extra functions if they are provided to edit/react to the edited item
+            self._executeExtraFunction(self.editItemsExtraFunctionList, item)
+            
+            entries, edit_window = self.openEditElementWindow(selection = selections)
 
             def save_edit():   # Define a function to save the edited item
+                
                 for key, entry in entries.items():  # Iterate over each key-entry pair
                     item[key] = entry.get() # Update the item with the entry value
                 self.JSONData[index] = item # Update the JSON data with the edited item
-                self.populate_listbox() # Repopulate the listbox
-                edit_window.destroy()  # Close the edit window
 
+                
+
+                self.populate_listbox() # Repopulate the listbox
+
+                edit_window.destroy()  # Close the edit window
+            edit_window.protocol("WM_DELETE_WINDOW", self.onEditClosingFunction) # Add a protocol to the window to call the onClosingFunction when the window is closed
 
             tk.Button(edit_window, text="Save", command=save_edit).pack(pady=10) # Create a "Save" button
 
 
-        # Call the extra functions if they are provided
-        self._executeExtraFunction(self.editItemsExtraFunctionList, selection)
+        
 
     def add_item(self):
         """Open a window to add a new item.
@@ -292,42 +314,85 @@ class JSONListbox(Listbox):
         selection = self.curselection() # Get the selected item(s)
         index = selection[0] if selection else tk.END # Get the index of the selected item or set to end
 
-        add_window = tk.Toplevel(self) # Create a new window for adding
-        add_window.grab_set() # Prevent interaction with the main window
-        add_window.title("Add Item") # Set the window title
-        entries = {} # Initialize a dictionary to store entry widgets
-
-        self.openCreateEditWindow(add_window, entries) # Call the extra functions if they are provided
+        window,entries= self.openCreateEditWindow("Add Item") # Call the extra functions if they are provided
 
         def save_add(): # Define a function to save the new item
             new_item = {label: widget.get() for label, widget in entries.items()} # Create a new item from the entries
+            
+            # Call the extra functions if they are provided to edit/react to the new item
+            self._executeExtraFunction(self.addItemExtraFunctionList, new_item)            
+            
+            
             if index == tk.END:
                 self.JSONData.append(new_item) # Append the new item to the JSON data
             else:
                 self.JSONData.insert(index, new_item) # Insert the new item at the selected index
+        
+          
             self.populate_listbox() # Repopulate the listbox
-            add_window.destroy() # Close the add window
+            window.destroy() # Close the add window
 
-        tk.Button(add_window, text="Save", command=save_add).pack(pady=10) # Create a "Save" button
+        window.protocol("WM_DELETE_WINDOW", self.onAddClosingFunction) # Add a protocol to the window to call the onClosingFunction when the window is closed
 
-        # Call the extra functions if they are provided
-        if self.addItemExtraFunctionList != None:
-            for function in self.addItemExtraFunctionList:
-                function()
+        tk.Button(window, text="Save", command=save_add).pack(pady=10) # Create a "Save" button
 
 
-    def openCreateEditWindow(self, add_window, entries):
-        for label, widget_info in self.fields.items(): # Iterate over each field
-            tk.Label(add_window, text=label).pack() # Create a label for the field
+
+
+
+
+    def openCreateEditWindow(self, title, selection = None):
+        window = tk.Toplevel(self) # Create a new window for adding
+        window.grab_set() # Prevent interaction with the main window
+        window.title(title) # Set the window title
+        entries = {} # Initialize a dictionary to store entry widgets
+        for label, widget_info in self.addFields.items(): # Iterate over each field
+            tk.Label(window, text=label).pack() # Create a label for the field
             widget_type = widget_info[0] # Get the type of the widget
             widget_kwargs = widget_info[1] # Get the kwargs for the widget
-            widget = widget_type(add_window, **widget_kwargs) # Create the widget
+            widget = widget_type(window, **widget_kwargs) # Create the widget
             widget.pack() # Pack the widget
             entries[label] = widget # Store the widget in the dictionary
+
+        return window, entries
         
     def returnJSON(self):
         print(self.JSONData)
         return self.JSONData
+    
+
+    def openEditElementWindow(self, selection):
+        window = tk.Toplevel(self)
+        window.grab_set()
+        window.title("Edit Element")
+        entries = {}
+
+        for label, widget_info in self.editFields.items():
+            # create a label and the prescribed widget for each field
+            # however, make the values in each field the values of the selected item
+            tk.Label(window, text=label).pack()
+            widget_type = widget_info[0]
+            widget_kwargs = widget_info[1]
+            print(str(list(widget_kwargs.items())) + "\n" + str(widget_type))
+            widget = widget_type(window, **widget_kwargs)
+            widget.pack()
+            entries[label] = widget
+            # set the value of the widget to the value of the selected item
+            if hasattr(widget, "insert"):
+                
+                widget.insert(0, self.JSONData[selection[0]][label])
+                
+            elif hasattr(widget, "set"):
+                
+                widget.set(self.JSONData[selection[0]][label])
+            
+
+
+        return entries, window
+    
+    def get(self, first, last = None):
+        return super().get(first, last)
+
 
 # Example usage
 if __name__ == "__main__":

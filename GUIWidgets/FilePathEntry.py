@@ -15,3 +15,17 @@ class FilePathEntry(Entry):
             self.delete(0, "end")
             self.insert(0, self.filepath)
             self.config(state="readonly")
+    
+    def get(self):
+        return super().get()
+    
+    def insert(self, index, string):
+        self.config(state="normal")
+        super().delete(index, "end")
+        super().insert(index, string)
+        self.config(state="readonly")
+
+    def delete(self, index1, index2):
+        self.config(state="normal")
+        super().delete(index1, index2)
+        self.config(state="readonly")

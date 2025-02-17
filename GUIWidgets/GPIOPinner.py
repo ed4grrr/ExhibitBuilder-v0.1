@@ -112,26 +112,58 @@ class GPIOPinner:
         }
         self.currentlyRentedPins = [] # a list of the pins that have been returned using returnFirstAvailablePin method. This is used to allow for calling the returnFirstAvailablePin method multiple times without returning the same pin multiple times.
 
-    def removeCurrentlyRentedPin(self, pin:int):
+
+    # TODO: clean the parameter types up to better reflect how the method is used
+    def removeCurrentlyRentedPin(self, pins:list[int | str] | list[list[int | str]]):
         """ a method to remove a pin from the currentlyRentedPins list
         
         This method removes a pin from the currentlyRentedPins list. This method is used to allow for calling the returnFirstAvailablePin method multiple times without returning the same pin multiple times.
+
+        This method will do nothing if the pin is not in the currentlyRentedPins list.
         Args:
-            pin (int): the pin to remove from the currentlyRentedPins list
+            pins (list[int | str] or list[list[int | str]]): the physic pin integer and the bcm number string to remove (or a list of of these lists) from the currentlyRentedPins list if they are no longer rented
+
             """
-        if pin in self.currentlyRentedPins:
-            self.currentlyRentedPins.remove(pin)
+        
+        # CYA if the user provides just a list with a single pair of physical/
+        # BCM numbers or a list of lists with multiple pairs of physical/BCM 
+        # numbers. This was done to allow for the user to provide either a 
+        # single rented pin to be returned or multiple rented pins to be 
+        # returned. The isInstance check is used to determine if the type of 
+        # the first element in the provided list. If the type is a list, then 
+        # the user provided a list of lists. If the type is not a list 
+        # (hopefully an int), then the user provided a single list with two 
+        # entries containg physicalnumber ints/BCM number strings respectively.
+        userProvidedPins = pins if isinstance(pins[0], list) else [pins]
+        
+        
+        for pinSet in userProvidedPins:    
+            if pinSet in self.currentlyRentedPins:
+                self.currentlyRentedPins.remove(pins)
+    
 
+    def clearRentedPins(self):
+        """ a method to clear the currentlyRentedPins list"""
+        self.currentlyRentedPins = []
 
-
-    def returnFirstAvailablePin(self)->list[int,str]:
+    def rentFirstAvailablePin(self)->list[int,int]:
         """ A method to return the first available GPIO pin in BCM numbering"""
-        for pin in self.assignedpins.keys():
-            if self.assignedpins[pin] == "" and pin not in self.currentlyRentedPins:
-                self.currentlyRentedPins.append(pin)
-                return self.GPIOPins[pin]
+        for phsyicalPin in self.assignedpins.keys():
+            BCMNumber = self.GPIOPins[phsyicalPin]
+            if self.assignedpins[phsyicalPin] == "" and [phsyicalPin,BCMNumber] not in self.currentlyRentedPins:
+                returnable = [phsyicalPin, BCMNumber] # return the pin board number and the pin BCM number
+                self.currentlyRentedPins.append(returnable)
+                return returnable 
         raise NoAvailablePinsException("No available GPIO pins to assign")
     
+    def NumberofAvailablePins(self)->int:
+        """ A method to return the number of available GPIO pins in BCM numbering"""
+        count = 0
+        for pin in self.assignedpins.keys():
+            if self.assignedpins[pin] == "" and pin not in self.currentlyRentedPins:
+                count += 1
+        return count
+
 
         
     def unasignPin(self, component:str):
@@ -164,7 +196,7 @@ class GPIOPinner:
             self.usedPins[pin] = component
             if pin in self.currentlyRentedPins:
                 self.currentlyRentedPins.remove(pin)
-            return self.GPIOPins[pin]
+            return [pin,self.GPIOPins[pin]] # return the pin board number and the pin BCM number
         
         # Maybe this is not necessary, but CYA
         raise NoAvailablePinsException(f"Provided pin {pin} cannot be assigned to the component {component}")
@@ -183,7 +215,7 @@ class GPIOPinner:
             if self.GPIOPins[pin] not in [None, "3.3V Power", "5V Power", "Ground"] and self.assignedpins[pin] == "":
                 self.assignedpins[pin] = component
                 self.usedPins[pin] = component
-                return self.GPIOPins[pin]
+                return [pin ,self.GPIOPins[pin]] # return the pin board number and the pin BCM number
         raise NoAvailablePinsException(f"No available GPIO pins to assign to the component {component}")
 
 
