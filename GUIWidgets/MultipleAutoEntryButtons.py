@@ -1,6 +1,6 @@
 from GUIWidgets.AutoEntryButton import AutoEntryButton
 from tkinter import Label, Widget, Frame
-class MultipleAutoEntryButtons:
+class MultipleAutoEntryButtons(Widget):
     def __init__(self,  root=None, valuesToBeShown = [], **kwargs):
         """A class to create multiple AutoEntryButtons in a grid layout
         
@@ -62,17 +62,19 @@ class MultipleAutoEntryButtons:
         return {label["text"]:box.get() for box, label in zip(self.Boxes,self.Labels)}
     
 
-    def insert(self, strings):
+    def insert(self, index, strings):
         """A function to insert a string into the AutoEntryButtons
         
         Args:
             self (MultipleAutoEntryButtons): The MultipleAutoEntryButtons object
             string (str): The string to be inserted into the AutoEntryButtons
         """
+        if type(strings) == dict:
+            strings = strings.values()
         for box, string in zip(self.Boxes,strings):
             box.config(state="normal")
-            box.delete(0, "end")
-            box.insert(0, string)
+            box.delete(index, "end")
+            box.insert(index, string)
             box.config(state="readonly")
 
     def deleteAll(self,index1, index2):

@@ -4,6 +4,7 @@ from GUIWidgets.JSONListbox import JSONListbox
 from GUIWidgets.FilePathEntry import FilePathEntry
 from GUIWidgets.AutoEntryButton import AutoEntryButton
 from GUIWidgets.MultipleAutoEntryButtons import MultipleAutoEntryButtons
+from GUIWidgets.EasySpinBox import EasySpinBox 
 from tkinter import messagebox, filedialog, Entry
 from tkinter.ttk import Combobox
 from ScriptBuilder.ScriptBuilder import ScriptBuilder
@@ -19,6 +20,7 @@ class MainGui:
         Returns:
             bool: True if the string is a valid float value between 0 and 1, False otherwise
         """
+        print(f"VALIDATING THIS STRING {stringToValidate}")
         try:
             value = float(stringToValidate)
             if value < 0:
@@ -106,7 +108,7 @@ class MainGui:
             "Name": [tk.Entry, {}],
             "SoundFilePath": [FilePathEntry, {}],
             "During Push or After Push": [Combobox, {"values":["During Push", "After Push"], "state":"readonly"}],
-            "Volume": [tk.Spinbox, {"values":tuple([floatValue/100 for floatValue in range(101)]), "validate":"all", "validatecommand":(self.root.register(self.validate_float), '%P')}],
+            "Volume": [EasySpinBox, {"values":tuple([floatValue/100 for floatValue in range(101)]), "validate":"all", "validatecommand":(self.root.register(self.validate_float), '%P')}],
 
             # The lambda functions below are used to call the 
             # assignPinAutomatically method with the argument "LED". This is done 

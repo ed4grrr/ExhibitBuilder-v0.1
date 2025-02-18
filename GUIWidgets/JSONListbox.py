@@ -378,8 +378,14 @@ class JSONListbox(Listbox):
             widget.pack()
             entries[label] = widget
             # set the value of the widget to the value of the selected item
+            print(self.JSONData[selection[0]][label])
+
+            if hasattr(widget, "current"): # deals with comboboxes
+                    index = widget_kwargs["values"].index(self.JSONData[selection[0]][label])
+                    widget.current(index)
+            
             if hasattr(widget, "insert"):
-                
+                    
                 widget.insert(0, self.JSONData[selection[0]][label])
                 
             elif hasattr(widget, "set"):
