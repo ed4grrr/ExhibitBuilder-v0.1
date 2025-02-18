@@ -1,3 +1,4 @@
+import json
 import tkinter as tk
 import re
 from GUIWidgets.JSONListbox import JSONListbox
@@ -47,7 +48,7 @@ class MainGui:
         self.pinner = GPIOPinner()
 
         # used to store the current project name and destination out path
-        self.currentProjectName = ""
+        self.projectName = ""
         self.destinationOutPath = ""
 
         
@@ -63,6 +64,8 @@ class MainGui:
         # the mainmenu. This is done by adding the fileMenu to the mainmenu as a
         # cascade.
         self.mainmenu.add_cascade(label='File', menu=self.fileMenu)
+
+        self.mainmenu.add_command(label='Save Current Project as', command=self.saveProject)
         
         # add options to File cascade
         self.fileMenu.add_command(label='Export JSON', command=self.
@@ -130,6 +133,7 @@ class MainGui:
         }
 
     
+
         # create a JLB to store user defined settings and data
         self.listBox= JSONListbox(self.root, title='Interactive Units', button_placement= 'bottom', addFields=JSONFields, editFields=editJSONFields)
         self.listBox.pack()
@@ -142,6 +146,26 @@ class MainGui:
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
 
 
+    def saveProject(self):
+        pathToFile = filedialog.asksaveasfilename(defaultextension=".json", filetypes=[("JSON files", "*.json")])
+
+        if pathToFile == "":
+            messagebox.showerror("Error", "You must enter a file name.")
+            return
+        with open(pathToFile, "w") as f:
+            listOfJSONS = self.listBox.getAll()
+            dictOfJSONS = {"interactiveUnits":listOfJSONS}
+            if self.projectName == "":
+                self.projectName = tk.simpledialog.askstring("Project Name", "Enter the name of the project.", initialvalue=self.projectName)
+
+        # check if the user entered a project name and project name contains 
+        # only valid characters
+            if not self.isValidWindowsFilename(self.projectName):
+                messagebox.showerror("Error", "You must enter a valid Windows project name.")
+                return
+            dictOfJSONS["projectName"] = self.projectName
+            json.dump(dictOfJSONS, f, indent=4)
+    
     def on_closing(self):
         """A function to execute when the user clicks on the exit button on the window
         """
@@ -159,7 +183,8 @@ class MainGui:
 
         # open a windows that forces the user to enter a project name and the 
         # absolute outpath for the project
-        self.projectName = tk.simpledialog.askstring("Project Name", "Enter the name of the project.", initialvalue=self.currentProjectName)
+        if self.projectName == "":
+            self.projectName = tk.simpledialog.askstring("Project Name", "Enter the name of the project.", initialvalue=self.projectName)
 
 
         # check if the user entered a project name and project name contains 

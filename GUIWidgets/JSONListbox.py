@@ -396,8 +396,12 @@ class JSONListbox(Listbox):
 
         return entries, window
     
-    def get(self, first, last = None):
+    def get(self, first, last = None) -> list[dict]:
         return super().get(first, last)
+    
+
+    def getAll(self) -> list[dict]:
+        return super().get(0, tk.END)
 
 
 # Example usage
